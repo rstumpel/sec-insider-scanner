@@ -2,14 +2,16 @@ name: SEC Insider Scraper & Trading Simulator
 
 on:
   schedule:
+    # Draait elke 6 uur om de markten en nieuwe meldingen te volgen
     - cron: '0 */6 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Hiermee kun je de knop "Run workflow" handmatig gebruiken
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Cruciaal om de JSON-portefeuilles op te slaan
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +22,8 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          pip install requests yfinance
 
       - name: Run Scraper and Update Portfolios
         run: python insider_scraper.py
@@ -29,8 +32,8 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # Zorg dat beide JSON bestanden worden opgeslagen
+          # Voeg alle relevante bestanden toe aan de commit
           git add insider_data/latest.json
           git add insider_data/fictional_portfolios.json
-          git commit -m "Update insider data & portfolios: $(date)" || echo "No changes to commit"
+          git commit -m "Update data & live market prices: $(date)" || echo "Geen wijzigingen om te committen"
           git push
