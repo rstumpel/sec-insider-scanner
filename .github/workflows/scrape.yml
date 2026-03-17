@@ -1,9 +1,9 @@
-name: SEC Insider Scraper
+name: SEC Insider Scraper & Trading Simulator
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Elke 6 uur
-  workflow_dispatch:      # Handmatige knop
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,13 +22,15 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run Scraper
+      - name: Run Scraper and Update Portfolios
         run: python insider_scraper.py
 
-      - name: Commit and Push
+      - name: Commit and Push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add insider_data/*.json
-          git commit -m "Update insider data: $(date)" || echo "No changes to commit"
+          # Zorg dat beide JSON bestanden worden opgeslagen
+          git add insider_data/latest.json
+          git add insider_data/fictional_portfolios.json
+          git commit -m "Update insider data & portfolios: $(date)" || echo "No changes to commit"
           git push
