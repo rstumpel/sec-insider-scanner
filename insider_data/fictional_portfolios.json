@@ -1,0 +1,17 @@
+{
+  "VIP_Follower": {
+    "balance": 10000.0,
+    "positions": [],
+    "total_profit": 0.0
+  },
+  "Whale_Watcher": {
+    "balance": 10000.0,
+    "positions": [],
+    "total_profit": 0.0
+  },
+  "Cluster_Hunter": {
+    "balance": 10000.0,
+    "positions": [],
+    "total_profit": 0.0
+  }
+}
