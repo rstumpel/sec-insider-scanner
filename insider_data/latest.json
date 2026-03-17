@@ -1,25 +1,5 @@
 {
-  "scraped_at": "2026-03-17T11:56:37.192013",
-  "results": [
-    {
-      "company": "General Atlantic",
-      "ticker": "AL",
-      "link": "https://www.sec.gov/Archives/edgar/data/2085145/000095014226000739/0000950142-26-000739-index.htm"
-    },
-    {
-      "company": "General Atlantic",
-      "ticker": "SPV",
-      "link": "https://www.sec.gov/Archives/edgar/data/1955839/000095014226000739/0000950142-26-000739-index.htm"
-    },
-    {
-      "company": "General Atlantic",
-      "ticker": "AL",
-      "link": "https://www.sec.gov/Archives/edgar/data/1857019/000095014226000739/0000950142-26-000739-index.htm"
-    },
-    {
-      "company": "General Atlantic",
-      "ticker": "SPV",
-      "link": "https://www.sec.gov/Archives/edgar/data/1793940/000095014226000739/0000950142-26-000739-index.htm"
-    }
-  ]
+  "updated": "2026-03-17T12:12:39.562085",
+  "total_filings": 0,
+  "clusters": []
 }
