@@ -5,57 +5,83 @@
     <title>SEC Trading Strategy Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-8">
+<body class="bg-gray-900 text-white p-6">
     <h1 class="text-4xl font-bold mb-2 text-center text-blue-400">📊 Insider Strategy Lab</h1>
-    <p class="text-center text-gray-400 mb-10 text-sm">Startkapitaal per strategie: €10.000 | Inleg per trade: €1.000</p>
+    <p class="text-center text-gray-400 mb-8 text-sm">Kapitaal: €10.000 per strategie | Live SEC Monitoring</p>
     
-    <div id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div id="portfolios" class="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+            </div>
+
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 h-fit">
+            <h2 class="text-xl font-bold mb-4 text-orange-400 flex items-center">
+                <span class="relative flex h-3 w-3 mr-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+                SEC Live Radar
+            </h2>
+            <div id="live-feed" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 text-sm text-gray-300">
+                Laden...
+            </div>
         </div>
+    </div>
 
     <script>
-        async function loadData() {
+        async function loadDashboard() {
             try {
-                const response = await fetch('insider_data/fictional_portfolios.json');
-                const data = await response.json();
-                const container = document.getElementById('dashboard');
+                // 1. Laad Portefeuilles
+                const pResp = await fetch('insider_data/fictional_portfolios.json');
+                const pData = await pResp.json();
+                const pContainer = document.getElementById('portfolios');
                 
-                for (const [strat, info] of Object.entries(data)) {
+                pContainer.innerHTML = '';
+                for (const [strat, info] of Object.entries(pData)) {
                     const profitColor = info.total_profit >= 0 ? 'text-green-400' : 'text-red-400';
                     const totalValue = (info.balance + info.positions.reduce((acc, p) => acc + p.amount + (p.pnl_usd || 0), 0)).toLocaleString();
 
-                    let positionsHtml = info.positions.map(p => `
-                        <div class="bg-gray-700 p-3 rounded mb-2 border-l-4 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}">
-                            <div class="flex justify-between font-bold text-lg">
-                                <span>${p.ticker}</span>
-                                <span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">
-                                    ${p.pnl_percent >= 0 ? '▲' : '▼'} ${p.pnl_percent}%
-                                </span>
-                            </div>
-                            <div class="text-xs text-gray-400 flex justify-between">
-                                <span>Inleg: $${p.amount}</span>
-                                <span>P/L: $${p.pnl_usd || 0}</span>
-                            </div>
+                    let posHtml = info.positions.map(p => `
+                        <div class="bg-gray-700 p-2 rounded text-xs border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'} mb-1">
+                            <div class="flex justify-between font-bold"><span>${p.ticker}</span><span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span></div>
                         </div>
                     `).join('');
 
-                    container.innerHTML += `
-                        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700">
-                            <h2 class="text-2xl font-bold mb-1 text-blue-300">${strat.replace('_', ' ')}</h2>
-                            <div class="mb-6">
-                                <span class="text-sm text-gray-500 font-semibold uppercase">Totaal Waarde</span>
-                                <div class="text-3xl font-mono">€${totalValue}</div>
-                                <div class="text-sm ${profitColor} font-bold">Winst: €${info.total_profit}</div>
-                            </div>
-                            <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3 tracking-widest">Actieve Posities</h3>
-                            <div class="space-y-2">${positionsHtml || '<p class="text-gray-600 italic">Wachten op signalen...</p>'}</div>
-                        </div>
-                    `;
+                    pContainer.innerHTML += `
+                        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg">
+                            <h3 class="font-bold text-blue-300 mb-2 border-b border-gray-700 pb-2">${strat.replace('_', ' ')}</h3>
+                            <div class="text-2xl font-mono mb-1">€${totalValue}</div>
+                            <div class="${profitColor} text-xs font-bold mb-4">Winst: €${info.total_profit}</div>
+                            <div class="space-y-1">${posHtml || '<p class="text-gray-600 italic text-xs">Geen actieve trades</p>'}</div>
+                        </div>`;
                 }
+
+                // 2. Laad Live Feed
+                const fResp = await fetch('insider_data/live_feed.json');
+                const fData = await fResp.json();
+                const fContainer = document.getElementById('live-feed');
+                
+                fContainer.innerHTML = fData.map(f => `
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700 hover:border-blue-500 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-blue-400">${f.ticker}</span>
+                            <span class="text-[10px] bg-gray-700 px-1 rounded">${f.type}</span>
+                        </div>
+                        <div class="text-[11px] mt-1 text-gray-400">${f.role}</div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-mono text-xs text-white">$${f.value.toLocaleString()}</span>
+                            <span class="${f.value > 50000 ? 'text-green-400' : 'text-gray-600'} text-[10px]">
+                                ${f.value > 50000 ? '⭐ KANDIDAAT' : 'Onder grens'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+
             } catch (e) {
-                document.getElementById('dashboard').innerHTML = '<p class="text-center col-span-3">Nog geen data beschikbaar. Run de scraper handmatig via Actions.</p>';
+                console.log("Nog geen data beschikbaar...");
             }
         }
-        loadData();
+        loadDashboard();
+        setInterval(loadDashboard, 60000); // Ververs elke minuut
     </script>
 </body>
 </html>
