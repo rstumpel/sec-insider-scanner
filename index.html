@@ -52,25 +52,35 @@
     </main>
 
     <script>
+        // Functie om de status van de bot te controleren
         async function checkBotHeartbeat() {
             try {
-                const hResp = await fetch('./insider_data/heartbeat.json');
+                // Aangepast pad voor GitHub Pages
+                const hResp = await fetch('insider_data/heartbeat.json');
+                if (!hResp.ok) throw new Error('No heartbeat');
                 const hData = await hResp.json();
+                
                 const diff = Math.floor((new Date() - new Date(hData.last_run)) / 1000 / 60);
                 const isOnline = diff < 45;
+                
                 document.getElementById('status-dot').className = `relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`;
                 document.getElementById('status-ping').className = isOnline ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" : "";
                 document.getElementById('status-text').innerText = `Bot ${isOnline ? 'Online' : 'Offline'} (${diff}m geleden)`;
-            } catch (e) { document.getElementById('status-text').innerText = "Bot Status: Onbekend"; }
+            } catch (e) { 
+                document.getElementById('status-text').innerText = "Bot Status: Geen data"; 
+            }
         }
 
+        // Functie om de data in te laden
         async function loadDashboard() {
             document.getElementById('last-update').innerText = `Update: ${new Date().toLocaleTimeString()}`;
             try {
-                const pResp = await fetch('./insider_data/fictional_portfolios.json');
+                // Laden van portefeuilles
+                const pResp = await fetch('insider_data/fictional_portfolios.json');
                 const pData = await pResp.json();
                 const pContainer = document.getElementById('portfolios');
                 pContainer.innerHTML = '';
+                
                 for (const [strat, info] of Object.entries(pData)) {
                     const profitColor = info.total_profit >= 0 ? 'text-green-400' : 'text-red-400';
                     const totalVal = (info.balance + info.positions.reduce((acc, p) => acc + (p.amount + p.pnl_usd), 0)).toLocaleString('nl-NL');
@@ -80,12 +90,18 @@
                             <div class="text-2xl font-mono font-bold mb-1">€${totalVal}</div>
                             <div class="${profitColor} text-xs font-bold mb-4">Winst: €${info.total_profit}</div>
                             <div class="space-y-2 text-[11px]">
-                                ${info.positions.map(p => `<div class="bg-gray-900 p-2 rounded flex justify-between border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}"><span>${p.ticker}</span><span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span></div>`).join('') || '<p class="text-gray-600 italic">Geen trades</p>'}
+                                ${info.positions.map(p => `
+                                    <div class="bg-gray-900 p-2 rounded flex justify-between border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}">
+                                        <span>${p.ticker}</span>
+                                        <span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span>
+                                    </div>
+                                `).join('') || '<p class="text-gray-600 italic">Geen trades</p>'}
                             </div>
                         </div>`;
                 }
 
-                const fResp = await fetch('./insider_data/live_feed.json');
+                // Laden van Live Radar
+                const fResp = await fetch('insider_data/live_feed.json');
                 const fData = await fResp.json();
                 document.getElementById('live-feed').innerHTML = fData.map(f => `
                     <div class="bg-gray-900 p-3 rounded border border-gray-700">
@@ -94,21 +110,10 @@
                         <div class="flex justify-between font-mono text-xs text-white"><span>$${f.value.toLocaleString()}</span><span class="${f.value > 50000 ? 'text-green-400' : 'text-gray-600'} text-[9px]">${f.value > 50000 ? '⭐' : ''}</span></div>
                     </div>`).join('');
 
-                const rResp = await fetch('./insider_data/rejected_filings.json');
+                // Laden van Filter Logboek
+                const rResp = await fetch('insider_data/rejected_filings.json');
                 const rData = await rResp.json();
                 document.getElementById('rejection-table').innerHTML = rData.map(r => `
                     <tr class="border-b border-gray-700/50 hover:bg-gray-750">
                         <td class="p-4 font-bold text-blue-400">${r.ticker} <span class="text-[10px] text-gray-500 font-normal">(${r.form_type})</span></td>
                         <td class="p-4 text-xs">${r.insider_role}</td>
-                        <td class="p-4 font-mono text-xs">$${r.value.toLocaleString()}</td>
-                        <td class="p-4"><span class="px-2 py-0.5 rounded bg-red-900/20 text-red-400 text-[10px] border border-red-800/30">${r.rejection_reason}</span></td>
-                        <td class="p-4 text-right text-gray-500 font-mono text-[10px]">${r.timestamp}</td>
-                    </tr>`).join('');
-            } catch (e) { console.log("Data laden..."); }
-        }
-
-        checkBotHeartbeat(); loadDashboard();
-        setInterval(() => { checkBotHeartbeat(); loadDashboard(); }, 60000);
-    </script>
-</body>
-</html>
