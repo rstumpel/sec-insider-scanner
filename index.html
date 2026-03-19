@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEC Strategy Lab</title>
+    <title>SEC Insider Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-        .bg-gray-850 { background-color: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-900 text-white p-4 md:p-8 font-sans">
 
     <header class="mb-10 text-center">
-        <h1 class="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">📊 Insider Strategy Lab</h1>
+        <h1 class="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            📊 Insider Strategy Lab
+        </h1>
         <div class="flex items-center justify-center space-x-4 text-gray-400 text-sm">
             <div id="bot-status" class="flex items-center">
                 <span class="relative flex h-2 w-2 mr-2">
@@ -25,95 +26,146 @@
                 <span id="status-text">Bot Status: Laden...</span>
             </div>
             <span class="h-1 w-1 bg-gray-600 rounded-full"></span>
-            <span id="last-update">Live SEC Monitoring</span>
+            <span id="last-update">Initialiseren...</span>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto">
-        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-            <div id="portfolios" class="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6"></div>
-            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 h-fit shadow-xl">
-                <h2 class="text-lg font-bold mb-4 text-orange-400 flex items-center gap-2">📡 SEC Live Radar</h2>
-                <div id="live-feed" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 text-sm"></div>
+        <div id="portfolios" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div id="card-VIP_Follower" class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
+                <h3 class="font-bold text-blue-300 mb-1 text-lg">👤 VIP Follower</h3>
+                <p class="text-[10px] text-gray-500 mb-3 uppercase tracking-wider font-semibold">Koopt mee met CEO/CFO ($50k+)</p>
+                <div class="text-3xl font-mono font-bold mb-1" id="val-VIP_Follower">€10.000</div>
+                <div class="text-green-400 text-xs font-bold mb-4" id="pnl-VIP_Follower">Winst: €0</div>
+                <div class="space-y-2 text-[11px]" id="pos-VIP_Follower">
+                    <p class="text-gray-600 italic">Wachten op eerste trade...</p>
+                </div>
+            </div>
+
+            <div id="card-Whale_Watcher" class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
+                <h3 class="font-bold text-emerald-300 mb-1 text-lg">🐋 Whale Watcher</h3>
+                <p class="text-[10px] text-gray-500 mb-3 uppercase tracking-wider font-semibold">Grote posities (>$500k of 13D)</p>
+                <div class="text-3xl font-mono font-bold mb-1" id="val-Whale_Watcher">€10.000</div>
+                <div class="text-green-400 text-xs font-bold mb-4" id="pnl-Whale_Watcher">Winst: €0</div>
+                <div class="space-y-2 text-[11px]" id="pos-Whale_Watcher">
+                    <p class="text-gray-600 italic">Wachten op eerste trade...</p>
+                </div>
+            </div>
+
+            <div id="card-Cluster_Hunter" class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
+                <h3 class="font-bold text-purple-300 mb-1 text-lg">🎯 Cluster Hunter</h3>
+                <p class="text-[10px] text-gray-500 mb-3 uppercase tracking-wider font-semibold">Meerdere insiders bij 1 ticker</p>
+                <div class="text-3xl font-mono font-bold mb-1" id="val-Cluster_Hunter">€10.000</div>
+                <div class="text-green-400 text-xs font-bold mb-4" id="pnl-Cluster_Hunter">Winst: €0</div>
+                <div class="space-y-2 text-[11px]" id="pos-Cluster_Hunter">
+                    <p class="text-gray-600 italic">Wachten op eerste trade...</p>
+                </div>
             </div>
         </div>
 
-        <div class="mt-8 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-gray-700 bg-gray-850"><h2 class="text-xl font-bold text-red-400">🚫 Filter Logboek</h2></div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-900 text-gray-400 uppercase text-[10px]">
-                        <tr><th class="p-4">Ticker</th><th class="p-4">Rol</th><th class="p-4">Waarde</th><th class="p-4">Reden</th><th class="p-4 text-right">Tijd</th></tr>
-                    </thead>
-                    <tbody id="rejection-table" class="divide-y divide-gray-700 text-gray-300"></tbody>
-                </table>
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            <div class="xl:col-span-3 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-2xl">
+                <div class="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-red-400 flex items-center gap-2">🚫 Filter Logboek</h2>
+                    <span class="text-[10px] text-gray-500">Toont afgewezen SEC filings</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-900 text-gray-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-4">Ticker</th>
+                                <th class="p-4">Rol</th>
+                                <th class="p-4">Waarde</th>
+                                <th class="p-4">Reden</th>
+                                <th class="p-4 text-right">Tijd</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rejection-table" class="divide-y divide-gray-700 text-gray-300">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-xl">
+                <h2 class="text-lg font-bold mb-4 text-orange-400 flex items-center gap-2">📡 SEC Radar</h2>
+                <div id="live-feed" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 text-sm">
+                    </div>
             </div>
         </div>
     </main>
 
     <script>
-        // Functie om de status van de bot te controleren
-        async function checkBotHeartbeat() {
+        const dataPath = 'insider_data/';
+
+        async function updateDashboard() {
+            document.getElementById('last-update').innerText = `Update: ${new Date().toLocaleTimeString()}`;
+
             try {
-                // Aangepast pad voor GitHub Pages
-                const hResp = await fetch('insider_data/heartbeat.json');
-                if (!hResp.ok) throw new Error('No heartbeat');
-                const hData = await hResp.json();
-                
-                const diff = Math.floor((new Date() - new Date(hData.last_run)) / 1000 / 60);
-                const isOnline = diff < 45;
-                
-                document.getElementById('status-dot').className = `relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`;
-                document.getElementById('status-ping').className = isOnline ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" : "";
-                document.getElementById('status-text').innerText = `Bot ${isOnline ? 'Online' : 'Offline'} (${diff}m geleden)`;
-            } catch (e) { 
-                document.getElementById('status-text').innerText = "Bot Status: Geen data"; 
+                // 1. Heartbeat check
+                const hResp = await fetch(dataPath + 'heartbeat.json');
+                if (hResp.ok) {
+                    const hData = await hResp.json();
+                    const diff = Math.floor((new Date() - new Date(hData.last_run)) / 1000 / 60);
+                    const isOnline = diff < 45;
+                    document.getElementById('status-dot').className = `relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`;
+                    document.getElementById('status-ping').className = isOnline ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" : "";
+                    document.getElementById('status-text').innerText = `Bot ${isOnline ? 'Online' : 'Offline'} (${diff}m geleden)`;
+                }
+
+                // 2. Portefeuilles laden
+                const pResp = await fetch(dataPath + 'fictional_portfolios.json');
+                if (pResp.ok) {
+                    const pData = await pResp.json();
+                    for (const [strat, info] of Object.entries(pData)) {
+                        const totalVal = (info.balance + info.positions.reduce((acc, p) => acc + (p.amount + (p.pnl_usd || 0)), 0)).toLocaleString('nl-NL');
+                        document.getElementById(`val-${strat}`).innerText = `€${totalVal}`;
+                        document.getElementById(`pnl-${strat}`).innerText = `Winst: €${info.total_profit || 0}`;
+                        document.getElementById(`pnl-${strat}`).className = (info.total_profit >= 0) ? 'text-green-400 text-xs font-bold mb-4' : 'text-red-400 text-xs font-bold mb-4';
+                        
+                        if (info.positions.length > 0) {
+                            document.getElementById(`pos-${strat}`).innerHTML = info.positions.map(p => `
+                                <div class="bg-gray-900 p-2 rounded flex justify-between border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}">
+                                    <span>${p.ticker}</span>
+                                    <span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                }
+
+                // 3. Live Feed
+                const fResp = await fetch(dataPath + 'live_feed.json');
+                if (fResp.ok) {
+                    const fData = await fResp.json();
+                    document.getElementById('live-feed').innerHTML = fData.map(f => `
+                        <div class="bg-gray-900 p-3 rounded border border-gray-700 border-l-2 ${f.value > 50000 ? 'border-orange-500' : 'border-gray-600'}">
+                            <div class="flex justify-between font-bold text-blue-400"><span>${f.ticker}</span><span class="text-[9px] bg-gray-700 px-1 rounded">${f.type}</span></div>
+                            <div class="text-[10px] text-gray-500 mb-2 truncate">${f.role}</div>
+                            <div class="flex justify-between font-mono text-xs text-white"><span>$${f.value.toLocaleString()}</span><span class="text-orange-400">${f.value > 100000 ? '🔥' : ''}</span></div>
+                        </div>`).join('');
+                }
+
+                // 4. Afgewezen filings
+                const rResp = await fetch(dataPath + 'rejected_filings.json');
+                if (rResp.ok) {
+                    const rData = await rResp.json();
+                    document.getElementById('rejection-table').innerHTML = rData.map(r => `
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-900 transition-colors">
+                            <td class="p-4 font-bold text-blue-400">${r.ticker} <span class="text-[10px] text-gray-500 font-normal">(${r.form_type})</span></td>
+                            <td class="p-4 text-xs">${r.insider_role}</td>
+                            <td class="p-4 font-mono text-xs text-gray-400">$${r.value.toLocaleString()}</td>
+                            <td class="p-4"><span class="px-2 py-0.5 rounded bg-red-900/20 text-red-400 text-[10px] border border-red-800/30">${r.rejection_reason}</span></td>
+                            <td class="p-4 text-right text-gray-500 font-mono text-[10px]">${r.timestamp}</td>
+                        </tr>`).join('');
+                }
+
+            } catch (e) {
+                console.error("Dashboard error:", e);
             }
         }
 
-        // Functie om de data in te laden
-        async function loadDashboard() {
-            document.getElementById('last-update').innerText = `Update: ${new Date().toLocaleTimeString()}`;
-            try {
-                // Laden van portefeuilles
-                const pResp = await fetch('insider_data/fictional_portfolios.json');
-                const pData = await pResp.json();
-                const pContainer = document.getElementById('portfolios');
-                pContainer.innerHTML = '';
-                
-                for (const [strat, info] of Object.entries(pData)) {
-                    const profitColor = info.total_profit >= 0 ? 'text-green-400' : 'text-red-400';
-                    const totalVal = (info.balance + info.positions.reduce((acc, p) => acc + (p.amount + p.pnl_usd), 0)).toLocaleString('nl-NL');
-                    pContainer.innerHTML += `
-                        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg">
-                            <h3 class="font-bold text-blue-300 mb-1 capitalize">${strat.replace(/_/g, ' ')}</h3>
-                            <div class="text-2xl font-mono font-bold mb-1">€${totalVal}</div>
-                            <div class="${profitColor} text-xs font-bold mb-4">Winst: €${info.total_profit}</div>
-                            <div class="space-y-2 text-[11px]">
-                                ${info.positions.map(p => `
-                                    <div class="bg-gray-900 p-2 rounded flex justify-between border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}">
-                                        <span>${p.ticker}</span>
-                                        <span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span>
-                                    </div>
-                                `).join('') || '<p class="text-gray-600 italic">Geen trades</p>'}
-                            </div>
-                        </div>`;
-                }
-
-                // Laden van Live Radar
-                const fResp = await fetch('insider_data/live_feed.json');
-                const fData = await fResp.json();
-                document.getElementById('live-feed').innerHTML = fData.map(f => `
-                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                        <div class="flex justify-between font-bold text-blue-400"><span>${f.ticker}</span><span class="text-[9px] bg-gray-700 px-1 rounded">${f.type}</span></div>
-                        <div class="text-[10px] text-gray-500 mb-2 truncate">${f.role}</div>
-                        <div class="flex justify-between font-mono text-xs text-white"><span>$${f.value.toLocaleString()}</span><span class="${f.value > 50000 ? 'text-green-400' : 'text-gray-600'} text-[9px]">${f.value > 50000 ? '⭐' : ''}</span></div>
-                    </div>`).join('');
-
-                // Laden van Filter Logboek
-                const rResp = await fetch('insider_data/rejected_filings.json');
-                const rData = await rResp.json();
-                document.getElementById('rejection-table').innerHTML = rData.map(r => `
-                    <tr class="border-b border-gray-700/50 hover:bg-gray-750">
-                        <td class="p-4 font-bold text-blue-400">${r.ticker} <span class="text-[10px] text-gray-500 font-normal">(${r.form_type})</span></td>
-                        <td class="p-4 text-xs">${r.insider_role}</td>
+        setInterval(updateDashboard, 60000);
+        updateDashboard();
+    </script>
+</body>
+</html>
