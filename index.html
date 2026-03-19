@@ -2,86 +2,173 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>SEC Trading Strategy Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEC Strategy Lab & Audit Trail</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        .bg-gray-850 { background-color: #1a202c; }
+    </style>
 </head>
-<body class="bg-gray-900 text-white p-6">
-    <h1 class="text-4xl font-bold mb-2 text-center text-blue-400">📊 Insider Strategy Lab</h1>
-    <p class="text-center text-gray-400 mb-8 text-sm">Kapitaal: €10.000 per strategie | Live SEC Monitoring</p>
-    
-    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div id="portfolios" class="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+<body class="bg-gray-900 text-white p-4 md:p-8 font-sans">
+
+    <header class="mb-10 text-center">
+        <h1 class="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            📊 Insider Strategy Lab
+        </h1>
+        <div class="flex items-center justify-center space-x-4 text-gray-400 text-sm">
+            <span>Kapitaal: <span class="text-white font-mono">€10.000 / strat</span></span>
+            <span class="h-1 w-1 bg-gray-600 rounded-full"></span>
+            <span id="last-update">Live SEC Monitoring</span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            
+            <div id="portfolios" class="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="animate-pulse bg-gray-800 h-64 rounded-xl border border-gray-700"></div>
+                <div class="animate-pulse bg-gray-800 h-64 rounded-xl border border-gray-700"></div>
+                <div class="animate-pulse bg-gray-800 h-64 rounded-xl border border-gray-700"></div>
             </div>
 
-        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 h-fit">
-            <h2 class="text-xl font-bold mb-4 text-orange-400 flex items-center">
-                <span class="relative flex h-3 w-3 mr-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-                </span>
-                SEC Live Radar
-            </h2>
-            <div id="live-feed" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 text-sm text-gray-300">
-                Laden...
+            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-xl h-fit">
+                <h2 class="text-lg font-bold mb-4 text-orange-400 flex items-center">
+                    <span class="relative flex h-3 w-3 mr-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                    </span>
+                    SEC Live Radar
+                </h2>
+                <div id="live-feed" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 text-sm">
+                    <p class="text-gray-500 italic">Data stream opstarten...</p>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div class="mt-8 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-850">
+                <h2 class="text-xl font-bold text-red-400 flex items-center gap-2">
+                    🚫 Filter Logboek 
+                    <span class="text-[10px] font-normal text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-gray-700 uppercase tracking-widest">Alle Filings (4, 13F, D)</span>
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-900 text-gray-400 uppercase text-[10px] tracking-wider">
+                        <tr>
+                            <th class="p-4">Ticker / Formulier</th>
+                            <th class="p-4">Betrokken Rol</th>
+                            <th class="p-4">Waarde</th>
+                            <th class="p-4">Reden Afwijzing</th>
+                            <th class="p-4 text-right">Tijdstip</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rejection-table" class="divide-y divide-gray-700">
+                        <tr><td colspan="5" class="p-8 text-center text-gray-600">Geen afgewezen data gevonden.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
     <script>
         async function loadDashboard() {
+            const timestamp = new Date().toLocaleTimeString('nl-NL');
+            document.getElementById('last-update').innerText = `Laatste update: ${timestamp}`;
+
+            // 1. Laad Portefeuilles
             try {
-                // 1. Laad Portefeuilles
-                const pResp = await fetch('insider_data/fictional_portfolios.json');
+                const pResp = await fetch('./insider_data/fictional_portfolios.json');
                 const pData = await pResp.json();
                 const pContainer = document.getElementById('portfolios');
-                
                 pContainer.innerHTML = '';
+
                 for (const [strat, info] of Object.entries(pData)) {
                     const profitColor = info.total_profit >= 0 ? 'text-green-400' : 'text-red-400';
-                    const totalValue = (info.balance + info.positions.reduce((acc, p) => acc + p.amount + (p.pnl_usd || 0), 0)).toLocaleString();
+                    const totalValue = (info.balance + info.positions.reduce((acc, p) => acc + p.amount + (p.pnl_usd || 0), 0)).toLocaleString('nl-NL', {minimumFractionDigits: 2});
+                    const growthPercent = ((info.total_profit / 10000) * 100).toFixed(1);
+                    const barColor = info.total_profit >= 0 ? 'bg-green-500' : 'bg-red-500';
 
                     let posHtml = info.positions.map(p => `
-                        <div class="bg-gray-700 p-2 rounded text-xs border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'} mb-1">
-                            <div class="flex justify-between font-bold"><span>${p.ticker}</span><span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent}%</span></div>
+                        <div class="bg-gray-900/50 p-2 rounded text-[11px] border-l-2 ${p.pnl_percent >= 0 ? 'border-green-500' : 'border-red-500'}">
+                            <div class="flex justify-between font-bold text-gray-200">
+                                <span>${p.ticker}</span>
+                                <span class="${p.pnl_percent >= 0 ? 'text-green-400' : 'text-red-400'}">${p.pnl_percent > 0 ? '+' : ''}${p.pnl_percent}%</span>
+                            </div>
                         </div>
                     `).join('');
 
                     pContainer.innerHTML += `
-                        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg">
-                            <h3 class="font-bold text-blue-300 mb-2 border-b border-gray-700 pb-2">${strat.replace('_', ' ')}</h3>
-                            <div class="text-2xl font-mono mb-1">€${totalValue}</div>
-                            <div class="${profitColor} text-xs font-bold mb-4">Winst: €${info.total_profit}</div>
-                            <div class="space-y-1">${posHtml || '<p class="text-gray-600 italic text-xs">Geen actieve trades</p>'}</div>
+                        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg hover:border-blue-500/50 transition-all">
+                            <h3 class="font-bold text-blue-300 mb-1 capitalize">${strat.replace(/_/g, ' ')}</h3>
+                            <div class="text-2xl font-mono font-bold mb-1">€${totalValue}</div>
+                            <div class="${profitColor} text-xs font-bold flex justify-between items-center mb-2">
+                                <span>Winst: €${info.total_profit}</span>
+                                <span>${growthPercent}%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 h-1 rounded-full mb-4 overflow-hidden">
+                                <div class="${barColor} h-1" style="width: ${Math.min(Math.max(Math.abs(growthPercent), 5), 100)}%"></div>
+                            </div>
+                            <div class="space-y-2">${posHtml || '<p class="text-gray-600 italic text-xs py-4 text-center">Wachten op koop-signaal...</p>'}</div>
                         </div>`;
                 }
+            } catch (e) { console.error("Portefeuille data nog niet beschikbaar."); }
 
-                // 2. Laad Live Feed
-                const fResp = await fetch('insider_data/live_feed.json');
+            // 2. Laad Live Feed (Rechter kolom)
+            try {
+                const fResp = await fetch('./insider_data/live_feed.json');
                 const fData = await fResp.json();
                 const fContainer = document.getElementById('live-feed');
-                
                 fContainer.innerHTML = fData.map(f => `
-                    <div class="bg-gray-900 p-3 rounded border border-gray-700 hover:border-blue-500 transition-colors">
-                        <div class="flex justify-between items-start">
+                    <div class="bg-gray-900/40 p-3 rounded border border-gray-700 hover:border-gray-500 transition-all">
+                        <div class="flex justify-between items-start mb-1">
                             <span class="font-bold text-blue-400">${f.ticker}</span>
-                            <span class="text-[10px] bg-gray-700 px-1 rounded">${f.type}</span>
+                            <span class="text-[9px] bg-blue-900/30 text-blue-300 px-1.5 py-0.5 rounded border border-blue-800/50 uppercase">${f.type}</span>
                         </div>
-                        <div class="text-[11px] mt-1 text-gray-400">${f.role}</div>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="font-mono text-xs text-white">$${f.value.toLocaleString()}</span>
-                            <span class="${f.value > 50000 ? 'text-green-400' : 'text-gray-600'} text-[10px]">
-                                ${f.value > 50000 ? '⭐ KANDIDAAT' : 'Onder grens'}
+                        <div class="text-[10px] text-gray-500 mb-2 truncate">${f.role}</div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-mono text-xs text-white tracking-tighter">$${f.value.toLocaleString()}</span>
+                            <span class="${f.value > 50000 ? 'text-emerald-400' : 'text-gray-600'} text-[9px] font-bold">
+                                ${f.value > 50000 ? '⭐ KANDIDAAT' : 'NEGEER'}
                             </span>
                         </div>
                     </div>
                 `).join('');
+            } catch (e) { console.error("Live feed nog niet beschikbaar."); }
 
-            } catch (e) {
-                console.log("Nog geen data beschikbaar...");
+            // 3. Laad Rejected Filings Tabel
+            try {
+                const rResp = await fetch('./insider_data/rejected_filings.json');
+                const rData = await rResp.json();
+                const rContainer = document.getElementById('rejection-table');
+                
+                rContainer.innerHTML = rData.map(r => `
+                    <tr class="hover:bg-gray-750 transition-colors border-b border-gray-700/50">
+                        <td class="p-4">
+                            <div class="font-bold text-blue-400">${r.ticker}</div>
+                            <div class="text-[10px] text-gray-500">${r.form_type}</div>
+                        </td>
+                        <td class="p-4 text-gray-400 text-xs">${r.insider_role || 'Onbekend'}</td>
+                        <td class="p-4 font-mono text-xs">$${r.value ? r.value.toLocaleString() : '0'}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 rounded bg-red-900/20 text-red-400 text-[10px] border border-red-800/30 shadow-inner">
+                                ${r.rejection_reason}
+                            </span>
+                        </td>
+                        <td class="p-4 text-right text-gray-500 text-[10px] font-mono">${r.timestamp}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { 
+                document.getElementById('rejection-table').innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-600 italic italic text-sm">Geen afgekeurde filings om weer te geven.</td></tr>';
             }
         }
+
         loadDashboard();
-        setInterval(loadDashboard, 60000); // Ververs elke minuut
+        setInterval(loadDashboard, 60000);
     </script>
 </body>
 </html>
