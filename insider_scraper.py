@@ -17,7 +17,7 @@ except ImportError:
 BASE_URL = "https://www.sec.gov"
 RSS_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&owner=include&count=100&output=atom"
 # BELANGRIJK: Vul hier je eigen e-mailadres in om blokkades te voorkomen
-HEADERS = {"User-Agent": "InsiderScannerPro/2.0 (contact: jouw-email@gmail.com)"}
+HEADERS = {"User-Agent": "InsiderScannerPro/2.0 (contact: reinier@stumpel.com)"}
 
 OUTPUT_DIR = Path("insider_data")
 OUTPUT_DIR.mkdir(exist_ok=True)
