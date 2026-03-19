@@ -4,7 +4,6 @@ import time
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from collections import defaultdict
 from pathlib import Path
 
 # Gebruik yfinance voor de actuele beurskoersen
@@ -16,12 +15,13 @@ except ImportError:
 # --- CONFIGURATIE ---
 BASE_URL = "https://www.sec.gov"
 RSS_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&owner=include&count=100&output=atom"
-# BELANGRIJK: Vul hier je eigen e-mailadres in om blokkades te voorkomen
+# BELANGRIJK: Gebruik een realistisch User-Agent om blokkades te voorkomen
 HEADERS = {"User-Agent": "InsiderScannerPro/2.0 (contact: reinier@stumpel.com)"}
 
 OUTPUT_DIR = Path("insider_data")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Bestandsnamen die exact overeenkomen met je index.html
 PORTFOLIO_FILE = OUTPUT_DIR / "fictional_portfolios.json"
 LIVE_FEED_FILE = OUTPUT_DIR / "live_feed.json"
 REJECTED_FILE = OUTPUT_DIR / "rejected_filings.json"
@@ -33,6 +33,7 @@ def get_current_price(ticker):
     if yf is None: return 0.0
     try:
         stock = yf.Ticker(ticker)
+        # Gebruik fast_info of regular market price
         price = stock.fast_info['last_price']
         return round(price, 2)
     except:
@@ -40,9 +41,9 @@ def get_current_price(ticker):
 
 def get_detailed_info(filing_url):
     """Analyseert Form 4 XML voor transactiedetails."""
-    data = {"role": "unknown", "value": 0.0, "is_vip": False, "price": 0.0}
+    data = {"role": "unknown", "value": 0.0, "is_vip": False, "price": 0.0, "type": "4"}
     try:
-        time.sleep(0.15) 
+        time.sleep(0.15) # SEC rate limit respecteren
         resp = requests.get(filing_url, headers=HEADERS, timeout=10)
         xml_match = re.search(r'href="(/Archives/edgar/data/[^"]+\.xml)"', resp.text)
         if not xml_match: return data
@@ -64,20 +65,19 @@ def get_detailed_info(filing_url):
         for trans in root.findall(".//nonDerivativeTransaction"):
             shares = trans.findtext(".//transactionShares/value", "0")
             price = trans.findtext(".//transactionPricePerShare/value", "0")
+            code = trans.findtext(".//transactionCoding/transactionCode", "")
             
-            # Check of het een aankoop (P) is
-            if trans.findtext(".//transactionCoding/transactionCode", "") == 'P':
-                # Deze regels moeten ingesprongen staan!
+            if code == 'P': # Purchase
                 total_value += float(shares) * float(price)
                 last_price = float(price)
         
         data["value"] = total_value
         data["price"] = last_price
     except Exception as e:
-        print(f"Detail error: {e}")
+        print(f"Detail error voor {filing_url}: {e}")
     return data
 
-def evaluate_strategies(finding, clusters):
+def evaluate_strategies(finding, current_portfolios):
     """Bepaalt of een aankoop in een strategie past."""
     triggered = []
     reasons = []
@@ -95,28 +95,67 @@ def evaluate_strategies(finding, clusters):
     elif finding['value'] < 500000 and finding['type'] not in ['13D', '13G']:
         reasons.append("Waarde te laag voor Whale")
 
-    # 3. Cluster Hunter
-    is_cluster = False
-    for c in clusters:
-        if c['ticker'] == finding['ticker'] and "ULTRA" in c['status']:
-            triggered.append("Cluster_Hunter")
-            is_cluster = True
-    if not is_cluster and finding['type'] == '4':
-        reasons.append("Geen koop-cluster")
+    # 3. Cluster Hunter (Simpele versie: koop als waarde > 100k)
+    if finding['value'] >= 100000:
+        triggered.append("Cluster_Hunter")
+    else:
+        reasons.append("Geen cluster/lage waarde")
 
     return list(set(triggered)), "; ".join(reasons)
 
-def update_portfolios(new_findings, clusters):
-    """Beheert de virtuele portefeuilles en logs."""
-    portfolios = None
-    if PORTFOLIO_FILE.exists():
+def run_scraper():
+    print(f"Start scan: {datetime.now()}")
+    
+    # Heartbeat bijwerken
+    with open(HEARTBEAT_FILE, "w") as f:
+        json.dump({"last_run": datetime.now().isoformat()}, f)
+
+    try:
+        resp = requests.get(RSS_URL, headers=HEADERS, timeout=15)
+        entries = re.findall(r'<entry>.*?</entry>', resp.text, re.DOTALL)
+    except Exception as e:
+        print(f"RSS Error: {e}")
+        return
+
+    new_findings = []
+    live_feed_data = []
+    
+    for entry in entries[:20]: # Check de laatste 20 meldingen
         try:
-            with open(PORTFOLIO_FILE, "r") as f:
-                portfolios = json.load(f)
-        except:
-            portfolios = None
+            ticker = re.search(r'<title>(.*?) \(', entry).group(1)
+            link = re.search(r'<link [^>]*href="(.*?)"', entry).group(1)
+            form_type = re.search(r'<term>(.*?)</term>', entry).group(1)
             
-    if not portfolios:
+            if form_type in ['4', '13D', '13G']:
+                details = get_detailed_info(link)
+                if details['value'] > 0:
+                    finding = {
+                        "ticker": ticker,
+                        "type": form_type,
+                        "value": details['value'],
+                        "role": details['role'],
+                        "is_vip": details['is_vip'],
+                        "buy_price": details['price'],
+                        "timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "form_type": form_type
+                    }
+                    new_findings.append(finding)
+                    live_feed_data.append(finding)
+        except:
+            continue
+
+    # Portefeuilles updaten
+    update_logic(new_findings)
+    
+    # Live feed opslaan
+    with open(LIVE_FEED_FILE, "w") as f:
+        json.dump(live_feed_data[:15], f)
+
+def update_logic(new_findings):
+    # Laden bestaande data
+    if PORTFOLIO_FILE.exists():
+        with open(PORTFOLIO_FILE, "r") as f: portfolios = json.load(f)
+    else:
         portfolios = {
             "VIP_Follower": {"balance": 10000.0, "positions": [], "total_profit": 0.0},
             "Whale_Watcher": {"balance": 10000.0, "positions": [], "total_profit": 0.0},
@@ -125,24 +164,51 @@ def update_portfolios(new_findings, clusters):
 
     rejected_log = []
 
-    # Marktupdate: Bereken huidige P/L
+    # Update huidige posities (P/L)
     for strat in portfolios:
-        current_p = 0.0
+        total_pnl = 0.0
         for pos in portfolios[strat]['positions']:
-            live_price = get_current_price(pos['ticker'])
-            if live_price > 0:
-                pos['current_price'] = live_price
-                pos['pnl_percent'] = round(((live_price - pos['buy_price']) / pos['buy_price']) * 100, 2)
-                pos['pnl_usd'] = round((pos['amount'] * (pos['pnl_percent'] / 100)), 2)
-                current_p += pos['pnl_usd']
-        portfolios[strat]['total_profit'] = round(current_p, 2)
+            current_price = get_current_price(pos['ticker'])
+            if current_price > 0:
+                pos['current_price'] = current_price
+                pos['pnl_percent'] = round(((current_price - pos['buy_price']) / pos['buy_price']) * 100, 2)
+                pos['pnl_usd'] = round((1000.0 * (pos['pnl_percent'] / 100)), 2)
+                total_pnl += pos['pnl_usd']
+        portfolios[strat]['total_profit'] = round(total_pnl, 2)
 
-    # Nieuwe meldingen checken
+    # Nieuwe trades verwerken
     for f in new_findings:
-        strats, reject_reason = evaluate_strategies(f, clusters)
+        strats, reject_reason = evaluate_strategies(f, portfolios)
         
         if strats:
             for s in strats:
-                # Alleen kopen als we de ticker nog niet hebben in deze strategie
+                # Alleen kopen als we ticker nog niet hebben
                 if not any(p['ticker'] == f['ticker'] for p in portfolios[s]['positions']):
-                    investment = 1000.0
+                    if portfolios[s]['balance'] >= 1000:
+                        portfolios[s]['balance'] -= 1000
+                        portfolios[s]['positions'].append({
+                            "ticker": f['ticker'],
+                            "buy_price": f['buy_price'],
+                            "amount": 1000,
+                            "pnl_percent": 0.0,
+                            "pnl_usd": 0.0
+                        })
+        else:
+            rejected_log.append({
+                "ticker": f['ticker'],
+                "insider_role": f['role'],
+                "value": f['value'],
+                "rejection_reason": reject_reason if reject_reason else "Niet interessant",
+                "timestamp": f['timestamp'],
+                "form_type": f['type']
+            })
+
+    # Opslaan
+    with open(PORTFOLIO_FILE, "w") as f:
+        json.dump(portfolios, f, indent=4)
+    
+    with open(REJECTED_FILE, "w") as f:
+        json.dump(rejected_log[:20], f, indent=4)
+
+if __name__ == "__main__":
+    run_scraper()
