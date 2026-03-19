@@ -2,15 +2,15 @@ name: SEC Insider Scraper & Trading Simulator
 
 on:
   schedule:
-    # Draait elke 6 uur om de markten en nieuwe meldingen te volgen
-    - cron: '0 */6 * * *'
-  workflow_dispatch: # Hiermee kun je de knop "Run workflow" handmatig gebruiken
+    # Draait nu elke 30 minuten (*/30) in plaats van elke 6 uur (*/6)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Behoud de handmatige startknop
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Cruciaal om de JSON-portefeuilles op te slaan
+      contents: write # Cruciaal om de JSON-data terug te schrijven naar je repo
 
     steps:
       - name: Checkout repository
@@ -32,8 +32,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # Voeg alle relevante bestanden toe aan de commit
-          git add insider_data/latest.json
-          git add insider_data/fictional_portfolios.json
-          git commit -m "Update data & live market prices: $(date)" || echo "Geen wijzigingen om te committen"
+          
+          # We voegen nu ALLE bestanden in de map insider_data toe
+          # Dit dekt: latest.json, portfolios.json, live_feed.json EN rejected_filings.json
+          git add insider_data/*.json
+          
+          # [skip ci] voorkomt dat de bot zichzelf in een oneindige loop triggert
+          git commit -m "Update SEC data & Audit Trail: $(date) [skip ci]" || echo "Geen wijzigingen"
           git push
